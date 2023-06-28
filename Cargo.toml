@@ -1,12 +1,7 @@
 [package]
-name = "optco"
+name = "oco"
 version = "0.1.0"
 edition = "2021"
-
-[workspace]
-members = [
-    "crates/enum_dispatch_clone"
-]
 
 # Improve optimizations for color-eyre/stable-eyre:
 # https://github.com/yaahc/color-eyre#improving-perf-on-debug-builds
@@ -16,11 +11,22 @@ opt-level = 3
 [dependencies]
 clap = { version = "4.3.3", features = ["derive"] }
 clio = { version = "0.2.7", features = ["clap-parse"] }
+derivative = "2.2.0"
+derive-new = "0.5.9"
 eyre = "0.6.8"
 color-eyre = "0.6.2"
 enum_dispatch = "0.3.11"
-enum_dispatch_clone = { path = "crates/enum_dispatch_clone" }
 itertools = "0.11.0"
+lazy_static = "1.4.0"
+pest = "2.6.0"
+pest_derive = "2.6.0"
+regex = "1.8.4"
 shlex = "1.1.0"
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.96"
+tap = "1.0.1"
+
+[dev-dependencies]
+similar-asserts = "1.4.2"
+paste = "1.0.6"
+ctor = "0.2.2"

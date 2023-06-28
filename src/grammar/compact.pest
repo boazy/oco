@@ -1,0 +1,49 @@
+ident_char = { ASCII_ALPHANUMERIC | "_" }
+ident = { !"-" ~ (ident_char | "-")+ }
+
+value_first_char = { ASCII_ALPHANUMERIC | '*'..'/' | ":" | ";" | "?" | "\\" | "_" }
+value_other_char = { "!" | "#" | "%" | "&" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | "=" | ">" | "@" }
+value = { !value_other_char ~ (value_first_char | value_other_char)* }
+
+ws = { " " | "\t" }
+
+single_quoted_char = { !"'" ~ ANY }
+single_quoted_text = { single_quoted_char* }
+single_quoted = { "'" ~ single_quoted_text ~ "'" }
+double_quote_escape = { "\\\"" | "\\\\" }
+double_quoted_char = { double_quote_escape | !"\"" ~ ANY }
+double_quoted_text = { double_quoted_char* }
+double_quoted = { "\"" ~ double_quoted_text ~ "\"" }
+quoted = { single_quoted | double_quoted }
+
+add_prefix = _{ "+" }
+remove_prefix = _{ "-" }
+repeat_prefix = _{ "++" }
+
+append_delimiter_char = { "," | ";" | ":" | "&" | "|" }
+append_delimiter = { append_delimiter_char | quoted }
+append_mod = { "+" ~ append_delimiter? }
+multi_arg_mod = { "/" }
+
+set_modifier = _{ append_mod | multi_arg_mod }
+add_modifier = _{ multi_arg_mod }
+
+
+raw_value_char = { !("\r" | "\n") ~ ANY }
+raw_value_arg = { raw_value_char* }
+value_arg = { (quoted | value) }
+value_args = { value_arg ~ (ws+ ~ value_arg)* }
+
+set_values = { set_modifier ~ "=" ~ value_args | "=" ~ raw_value_arg }
+add_values = { add_modifier ~ "=" ~ value_args | "=" ~ raw_value_arg }
+repeat_values = { "=" ~ value_args }
+
+option_name = { (quoted | ident) }
+
+set_command = { option_name ~ set_values? }
+add_command = { add_prefix ~ option_name ~ add_values? }
+remove_command = { remove_prefix ~ option_name }
+repeat_command = { repeat_prefix ~ option_name ~ repeat_values }
+
+command = { repeat_command | add_command | remove_command | set_command }
+command_input = { SOI ~ command ~ EOI }

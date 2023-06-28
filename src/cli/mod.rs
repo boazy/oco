@@ -1,11 +1,9 @@
 mod dialect;
 mod deserialize_from_args;
 
-use crate::opts::grammar::Grammar;
-use clap::{Parser, Subcommand, ValueEnum};
-use clap::builder::{PossibleValue, ValueParserFactory};
-use clio::Input;
-use enum_dispatch::enum_dispatch;
+use clap::{Args, Parser};
+use clio::{Input, Output};
+
 
 pub use crate::cli::dialect::Dialect;
 
@@ -13,27 +11,38 @@ pub use crate::cli::dialect::Dialect;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
-    #[command(subcommand)]
-    pub command: Command,
+    /// Input file, use '-' for stdin
+    #[arg(short('i'), long, value_parser, default_value = "-")]
+    pub input: Input,
+
+    /// Output file, use '-' for stdout
+    #[arg(short('o'), long, value_parser, default_value = "-")]
+    pub output: Output,
+
+    #[arg(short('I'), long, default_value = "gnu")]
+    pub input_dialect: Dialect,
+
+    #[arg(short('O'), long, default_value = "gnu")]
+    pub output_dialect: Dialect,
+
+    #[clap(flatten)]
+    pub commands: CommandSpec,
 }
 
-#[derive(Subcommand, Debug)]
-pub enum Command {
-    Edit {
-        /// Input file, use '-' for stdin
-        #[arg(short('f'), long("file"), value_parser, default_value = "-")]
-        input: Input,
+#[derive(Args, Debug)]
+pub struct CommandSpec {
+    /// Use full script language syntax for argument processing
+    ///
+    /// If this flag is not specified, the compact syntax will be used.
+    #[arg(short('l'), default_value = "false")]
+    pub full_script_syntax: bool,
 
-        #[arg(short('I'), long, default_value = "gnu")]
-        input_dialect: Dialect,
+    #[arg(short('f'), long("file"), value_parser, group = "commands")]
+    pub command_file: Option<Input>,
 
-        #[arg(short('O'), long, default_value = "gnu")]
-        output_dialect: Dialect,
-    },
-}
+    #[arg(short('c'), long, default_value = "", group = "commands")]
+    pub with_commands: String,
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum Foo {
-    Gnu,
-    Posix,
+    #[arg(group="commands", value_name = "COMMAND")]
+    pub args: Vec<String>,
 }

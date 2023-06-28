@@ -1,17 +1,15 @@
-use std::backtrace;
-use std::collections::BTreeMap;
+
 use clap::builder::{ValueParser, ValueParserFactory};
 use color_eyre::Help;
 use enum_dispatch::enum_dispatch;
-use enum_dispatch_clone::EnumDispatchClone;
 use crate::cli::deserialize_from_args::deserialize_from_args;
 use crate::opts::grammar::Gnu;
-use eyre::{bail, Context, eyre, Result};
+use eyre::{bail, Result};
 
-#[derive(Debug, PartialEq, Eq, EnumDispatchClone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[enum_dispatch(Grammar)]
 pub enum Dialect {
-    Gnu,
+    Gnu(Gnu),
 }
 
 impl ValueParserFactory for Dialect {
@@ -42,15 +40,15 @@ fn parse_dialect(value: &str) -> Result<Dialect> {
 }
 
 fn parse_dialect_string(value: &str) -> (&str, Vec<(&str, Option<&str>)>) {
-    let (name, args) = value.split_once(":").unwrap_or((value, ""));
+    let (name, args) = value.split_once(':').unwrap_or((value, ""));
 
     if args.is_empty() {
         return (name, Vec::new());
     }
 
     // Return arguments as map
-    let arg_map = args.split(",").map(|arg| {
-        match arg.split_once("=") {
+    let arg_map = args.split(',').map(|arg| {
+        match arg.split_once('=') {
             None => (arg, None),
             Some((key, value)) => (key, Some(value))
         }

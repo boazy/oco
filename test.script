@@ -1,0 +1,4 @@
+add sw
+radd sw=*.png *.jpg '' -r
+add sw
+append ',' c=pos1 pos2 pos3 # More data

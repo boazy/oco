@@ -1,12 +1,10 @@
-use std::any::type_name;
-use std::collections::BTreeMap;
-use std::env::var;
 use std::fmt::{Display, Formatter};
 use std::iter::Peekable;
 use std::mem::swap;
-use std::ops::DerefMut;
 use std::str::FromStr;
-use eyre::{Report, WrapErr};
+
+use derive_new::new;
+use eyre::{Report};
 use serde::de::{DeserializeSeed, EnumAccess, Error, Expected, Unexpected, VariantAccess, Visitor};
 use serde::Deserialize;
 use serde::ser::StdError;
@@ -17,12 +15,7 @@ pub fn deserialize_from_args<'de, D, I>(args: I) -> Result<D>
     where D: Deserialize<'de>,
           I: Iterator<Item=ArgIn<'de>>
 {
-    let mut deserializer = Deserializer {
-        args: args.peekable(),
-        next_arg: None,
-        expected_fields: None,
-        next_enum: None,
-    };
+    let mut deserializer = Deserializer::new(args.peekable());
     D::deserialize(&mut deserializer)
 }
 
@@ -65,11 +58,18 @@ impl Error for SimpleError {
     }
 }
 
+#[derive(new)]
 struct Deserializer<'de, I: Iterator<Item=ArgIn<'de>>> {
     args: Peekable<I>,
+
+    #[new(default)]
     next_arg: Option<Arg<'de>>,
+
+    #[new(default)]
     expected_fields: Option<&'static [&'static str]>,
-    next_enum: Option<&'de str>,
+
+    #[new(default)]
+    next_enum_value: Option<&'de str>,
 }
 
 type Result<T> = std::result::Result<T, SimpleError>;
@@ -87,7 +87,7 @@ impl<'de, I> Deserializer<'de, I>
         next_arg
                 .map(|arg| (arg.name, arg.value))
                 .ok_or_else(|| Error::custom(
-                    format!("Expected a value, but found an identifier or end of arguments")
+                    "Expected a value, but found an identifier or end of arguments".to_string()
                 ))
     }
 
@@ -97,10 +97,9 @@ impl<'de, I> Deserializer<'de, I>
             ArgValue::Bool(value) =>
                 return Err(SimpleError::invalid_type_for(name, Unexpected::Bool(value), visitor)),
             ArgValue::Str(value) => {
-                let value = value.parse().map_err(|_| {
+                value.parse().map_err(|_| {
                     SimpleError::invalid_type_for(name, Unexpected::Str(value), visitor)
-                })?;
-                value
+                })?
             }
         };
         Ok(value)
@@ -119,7 +118,7 @@ impl<'de, I> Deserializer<'de, I>
     }
 
     fn expect_enum(&mut self, variants: &'static [&'static str])
-                                    -> Result<(&'de str, &'de str)>
+                   -> Result<(&'de str, &'de str)>
     {
         let (name, value) = self.expect_next_arg()?;
         let value = match value {
@@ -130,7 +129,7 @@ impl<'de, I> Deserializer<'de, I>
                 ).collect::<String>();
                 return Err(SimpleError::invalid_type_for(
                     name, Unexpected::Bool(value), &format!("an enum variant, one of {all_variants}").as_str(),
-                ))
+                ));
             }
             ArgValue::Str(value) => {
                 value
@@ -227,11 +226,11 @@ impl<'a, 'de, I> serde::Deserializer<'de> for &'a mut Deserializer<'de, I>
         visitor.visit_borrowed_str(value)
     }
 
-    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("binary values are not supported"))
     }
 
-    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("binary values are not supported"))
     }
 
@@ -239,31 +238,31 @@ impl<'a, 'de, I> serde::Deserializer<'de> for &'a mut Deserializer<'de, I>
         visitor.visit_some(self)
     }
 
-    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("unit values are not supported"))
     }
 
-    fn deserialize_unit_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("unit struct values are not supported"))
     }
 
-    fn deserialize_newtype_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_newtype_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("newtype struct values are not supported"))
     }
 
-    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_seq<V>(self, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("sequence values are not supported"))
     }
 
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_tuple<V>(self, _len: usize, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("tuple values are not supported"))
     }
 
-    fn deserialize_tuple_struct<V>(self, name: &'static str, len: usize, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_tuple_struct<V>(self, _name: &'static str, _len: usize, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("tuple struct values are not supported"))
     }
 
-    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_map<V>(self, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(Error::custom("map values are not supported"))
     }
 
@@ -281,13 +280,13 @@ impl<'a, 'de, I> serde::Deserializer<'de> for &'a mut Deserializer<'de, I>
                            -> Result<V::Value> where V: Visitor<'de>
     {
         let (field_name, next_enum_value) = self.expect_enum(variants)?;
-        self.next_enum = Some(next_enum_value);
+        self.next_enum_value = Some(next_enum_value);
         visitor.visit_enum(EnumAccessImpl { de: self, type_name: name, field_name })
     }
 
     fn deserialize_identifier<V>(mut self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
-        if let Some(next_enum_value) = self.next_enum {
-            self.next_enum = None;
+        if let Some(next_enum_value) = self.next_enum_value {
+            self.next_enum_value = None;
             return visitor.visit_borrowed_str(next_enum_value);
             //return self.deserialize_str(visitor);
         }
@@ -295,8 +294,8 @@ impl<'a, 'de, I> serde::Deserializer<'de> for &'a mut Deserializer<'de, I>
         let (name, value) = self.args.next().ok_or_else(|| Error::custom("missing identifier"))?;
         let (name, value) = match value {
             None =>
-                if name.starts_with('-') {
-                    (&name[1..], ArgValue::Bool(false))
+                if let Some(name_without_prefix) = name.strip_prefix('-') {
+                    (name_without_prefix, ArgValue::Bool(false))
                 } else {
                     (name, ArgValue::Bool(true))
                 },
@@ -308,7 +307,7 @@ impl<'a, 'de, I> serde::Deserializer<'de> for &'a mut Deserializer<'de, I>
         visitor.visit_borrowed_str(name)
     }
 
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         let (name, _) = self.expect_next_arg()?;
         Err(SimpleError::unknown_field(name, self.expected_fields.unwrap_or(&[])))
     }
@@ -331,7 +330,7 @@ impl<'a, 'de, I> serde::de::MapAccess<'de> for MapAccessImpl<'a, 'de, I>
         if self.de.args.peek().is_none() {
             return Ok(None); // No more elements in map
         }
-        seed.deserialize(&mut *self.de).map(|r| Some(r))
+        seed.deserialize(&mut *self.de).map(Some)
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value>
@@ -380,15 +379,15 @@ impl<'a, 'de, I> VariantAccess<'de> for EnumAccessImpl<'a, 'de, I>
         Ok(())
     }
 
-    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value> where T: DeserializeSeed<'de> {
+    fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value> where T: DeserializeSeed<'de> {
         Err(self.unsupported_variant())
     }
 
-    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(self.unsupported_variant())
     }
 
-    fn struct_variant<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value> where V: Visitor<'de> {
+    fn struct_variant<V>(self, _fields: &'static [&'static str], _visitor: V) -> Result<V::Value> where V: Visitor<'de> {
         Err(self.unsupported_variant())
     }
 }

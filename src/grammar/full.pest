@@ -1,0 +1,38 @@
+ident_char = _{ ASCII_ALPHANUMERIC | "_" }
+ident = _{ !"-" ~ (ident_char | "-")+ }
+
+value_first_char = _{ ASCII_ALPHANUMERIC | '*'..'/' | ":" | ";" | "?" | "\\" | "_" }
+value_other_char = _{ "!" | "%" | "&" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | "=" | ">" | "@" }
+value = { !value_other_char ~ (value_first_char | value_other_char)+ }
+
+ws_char = _{" " | "\t"}
+WS = _{ ws_char+ }
+
+single_quoted_char = _{ !"'" ~ ANY }
+single_quoted_text = _{ single_quoted_char* }
+single_quoted = { "'" ~ single_quoted_text ~ "'" }
+double_quote_escape = _{ "\\\"" | "\\\\" }
+double_quoted_char = _{ double_quote_escape | !"\"" ~ ANY }
+double_quoted_text = _{ double_quoted_char* }
+double_quoted = { "\"" ~ double_quoted_text ~ "\"" }
+quoted = { single_quoted | double_quoted }
+
+name = { ident | quoted }
+value_arg = { value | quoted }
+
+assign_multi_arg = _{ "=" ~ WS? ~ (value_arg ~ (WS ~ value_arg)*) }
+
+append_args = { "(" ~ value_arg ~ ")" }
+
+set_command = { "set" ~ WS ~ name ~ WS? ~ assign_multi_arg? }
+add_command = { "add" ~ WS ~ name ~ WS? ~ assign_multi_arg? }
+radd_command = { "radd" ~ WS ~ name ~ WS? ~ assign_multi_arg }
+remove_command = { "remove" ~ WS ~ name }
+append_command = { "append" ~ WS ~ (quoted ~ WS)? ~ name ~ WS? ~ assign_multi_arg }
+
+command = _{ set_command | add_command | radd_command | remove_command | append_command }
+
+line_comment = _{ "#" ~ (!NEWLINE ~ ANY)* }
+
+line = _{ WS? ~ (!("#" | command) | line_comment | (command ~ (WS ~ line_comment)?)) }
+commands = { SOI ~ line? ~ (NEWLINE ~ line?)* ~ EOI }
