@@ -35,7 +35,9 @@ CLI options before pushing them to another command.
 
 ### 📦 Installation
 
-TBD
+```sh
+cargo install oco
+```
 
 ### 🎮 Using oco
 
