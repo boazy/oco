@@ -1,7 +1,13 @@
 [package]
 name = "oco"
+description = """
+  A command-line option processor that lets you parse and manipulate the values of command-line options specified in GNU
+  or POSIX formats, before pushing them to another command.
+"""
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/boazy/oco"
 
 # Improve optimizations for color-eyre/stable-eyre:
 # https://github.com/yaahc/color-eyre#improving-perf-on-debug-builds
