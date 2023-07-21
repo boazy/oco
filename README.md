@@ -3,11 +3,10 @@
 <h1 align="center">
 <br>oco
 </h1>
-
-<p align="center">
-<img src="https://img.shields.io/badge/Rust-000000.svg?style&logo=Rust&logoColor=white" alt="Rust" />
-</p>
 </div>
+
+![Rust](https://img.shields.io/badge/Rust-000000.svg?style&logo=Rust&logoColor=white)
+[![crates.io](https://img.shields.io/crates/v/oco.svg?colorB=51b6d2)](https://crates.io/crates/oco)
 
 ---
 
